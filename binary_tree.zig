@@ -4,6 +4,8 @@ const debug = std.debug;
 const heap = std.heap;
 const mem = std.mem;
 
+const TailQueue = std.TailQueue;
+
 pub const TraversalOrder = enum {
     PreOrder,
     InOrder,
@@ -19,6 +21,8 @@ pub const BinaryTree = struct {
 
     root: *Node,
 };
+
+const Queue = TailQueue(?*BinaryTree.Node);
 
 pub fn walk(curr: ?*BinaryTree.Node, path: *std.ArrayList(u8), order: TraversalOrder) !void {
     if (curr == null) {
@@ -40,12 +44,36 @@ pub fn walk(curr: ?*BinaryTree.Node, path: *std.ArrayList(u8), order: TraversalO
     }
 }
 
-pub fn traverse(tree: *BinaryTree, order: TraversalOrder, allocator: mem.Allocator) ![]const u8 {
+// Traversal is DFS via a Stack
+// The stack in this case is the "function call stack"
+pub fn traverse(allocator: mem.Allocator, tree: *BinaryTree, order: TraversalOrder) ![]const u8 {
     var path: std.ArrayList(u8) = std.ArrayList(u8).init(allocator);
     defer path.deinit();
 
     try walk(tree.root, &path, order);
     return try path.toOwnedSlice();
+}
+
+pub fn bfs(head: *BinaryTree.Node, needle: u8) bool {
+    var queue = Queue{};
+    queue.append(&Queue.Node{ .data = head });
+
+    while (queue.len > 0) {
+        var curr = queue.popFirst();
+        if (curr) |node| {
+            if (node.data) |node_data| {
+                if (node_data.data == needle) {
+                    return true;
+                }
+                queue.append(&Queue.Node{ .data = node_data.left });
+                queue.append(&Queue.Node{ .data = node_data.right });
+            }
+        } else {
+            continue;
+        }
+    }
+
+    return false;
 }
 
 var n6 = BinaryTree.Node{ .data = 21 };
@@ -62,7 +90,7 @@ test "traverses tree pre-order" {
     defer arena.deinit();
     var allocator = arena.allocator();
 
-    var path = try traverse(&bt, .PreOrder, allocator);
+    var path = try traverse(allocator, &bt, .PreOrder);
     try testing.expect(path.len == 7);
 
     const expected_path = [7]u8{ 7, 23, 5, 4, 3, 18, 21 };
@@ -74,7 +102,7 @@ test "traverses tree post-order" {
     defer arena.deinit();
     var allocator = arena.allocator();
 
-    var path = try traverse(&bt, .PostOrder, allocator);
+    var path = try traverse(allocator, &bt, .PostOrder);
     try testing.expect(path.len == 7);
 
     const expected_path = [7]u8{ 5, 4, 23, 18, 21, 3, 7 };
@@ -86,9 +114,21 @@ test "traverses tree in-order" {
     defer arena.deinit();
     var allocator = arena.allocator();
 
-    var path = try traverse(&bt, .InOrder, allocator);
+    var path = try traverse(allocator, &bt, .InOrder);
     try testing.expect(path.len == 7);
 
     const expected_path = [7]u8{ 5, 23, 4, 7, 18, 3, 21 };
     try testing.expect(mem.eql(u8, path, &expected_path));
+}
+
+test "bfs: does find 23" {
+    const needle = 23;
+    var did_find_needle = bfs(bt.root, needle);
+    try testing.expect(did_find_needle == true);
+}
+
+test "bfs: does not find 42" {
+    const needle = 42;
+    var did_find_needle = bfs(bt.root, needle);
+    try testing.expect(did_find_needle == false);
 }
