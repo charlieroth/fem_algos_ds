@@ -76,13 +76,83 @@ pub fn bfs(head: *BinaryTree.Node, needle: u8) bool {
     return false;
 }
 
+pub fn compare(a: ?*BinaryTree.Node, b: ?*BinaryTree.Node) bool {
+    // Two trees are structural and value equivalent if bottom is reached
+    // without returning false prior
+    if (a == null and b == null) {
+        return true;
+    }
+
+    // Structural equivalence: Two tress are not equivalent if two of (what
+    // are supposed to be the same) nodes, are not the same
+    if (a == null or b == null) {
+        return false;
+    }
+
+    // Value equivalence: Two tress are not equivalent if two of (what
+    // are supposed to be the same) nodes, are not the same value
+    if (a.?.data != b.?.data) {
+        return false;
+    }
+
+    return compare(a.?.left, b.?.left) and compare(a.?.right, b.?.right);
+}
+
+pub fn search(curr: ?*BinaryTree.Node, needle: u8) bool {
+    if (curr) |node| {
+        if (node.data == needle) {
+            return true;
+        }
+
+        if (node.data < needle) {
+            return search(node.right, needle);
+        }
+
+        return search(node.left, needle);
+    }
+
+    return false;
+}
+
+pub fn dfs(head: ?*BinaryTree.Node, needle: u8) bool {
+    return search(head, needle);
+}
+
+// pub fn insert(parent: ?*BinaryTree.Node, curr: ?*BinaryTree.Node, node: *BinaryTree.Node) void {
+//     if (node.data > curr.?.data) {
+//         insert(curr, curr.?.right, node);
+//     } else if (node.data <= curr.?.data) {
+//         insert(curr, curr.?.left, node);
+//     } else {
+//         if (node.data > parent.?.data) {
+//             parent.?.right = node;
+//             return;
+//         }
+//
+//         parent.?.left = node;
+//         return;
+//     }
+// }
+
 var n6 = BinaryTree.Node{ .data = 21 };
 var n5 = BinaryTree.Node{ .data = 18 };
 var n4 = BinaryTree.Node{ .data = 4 };
 var n3 = BinaryTree.Node{ .data = 5 };
-var n2 = BinaryTree.Node{ .data = 3, .left = &n5, .right = &n6 };
-var n1 = BinaryTree.Node{ .data = 23, .left = &n3, .right = &n4 };
-var n0 = BinaryTree.Node{ .data = 7, .left = &n1, .right = &n2 };
+var n2 = BinaryTree.Node{
+    .data = 3,
+    .left = &n5,
+    .right = &n6,
+};
+var n1 = BinaryTree.Node{
+    .data = 23,
+    .left = &n3,
+    .right = &n4,
+};
+var n0 = BinaryTree.Node{
+    .data = 7,
+    .left = &n1,
+    .right = &n2,
+};
 var bt = BinaryTree{ .root = &n0 };
 
 test "traverses tree pre-order" {
@@ -131,4 +201,126 @@ test "bfs: does not find 42" {
     const needle = 42;
     var did_find_needle = bfs(bt.root, needle);
     try testing.expect(did_find_needle == false);
+}
+
+test "compare: two trees are structural and value equivalent" {
+    var bt1n6 = BinaryTree.Node{ .data = 21 };
+    var bt1n5 = BinaryTree.Node{ .data = 18 };
+    var bt1n4 = BinaryTree.Node{ .data = 4 };
+    var bt1n3 = BinaryTree.Node{ .data = 5 };
+    var bt1n2 = BinaryTree.Node{
+        .data = 3,
+        .left = &bt1n5,
+        .right = &bt1n6,
+    };
+    var bt1n1 = BinaryTree.Node{
+        .data = 23,
+        .left = &bt1n3,
+        .right = &bt1n4,
+    };
+    var bt1n0 = BinaryTree.Node{
+        .data = 7,
+        .left = &bt1n1,
+        .right = &bt1n2,
+    };
+    var bt1 = BinaryTree{ .root = &bt1n0 };
+
+    var trees_are_equal = compare(bt.root, bt1.root);
+    try testing.expect(trees_are_equal == true);
+}
+
+test "compare: two trees are structural equivalent and not value equivalent" {
+    var bt1n6 = BinaryTree.Node{ .data = 42 };
+    var bt1n5 = BinaryTree.Node{ .data = 18 };
+    var bt1n4 = BinaryTree.Node{ .data = 4 };
+    var bt1n3 = BinaryTree.Node{ .data = 5 };
+    var bt1n2 = BinaryTree.Node{
+        .data = 3,
+        .left = &bt1n5,
+        .right = &bt1n6,
+    };
+    var bt1n1 = BinaryTree.Node{
+        .data = 23,
+        .left = &bt1n3,
+        .right = &bt1n4,
+    };
+    var bt1n0 = BinaryTree.Node{
+        .data = 7,
+        .left = &bt1n1,
+        .right = &bt1n2,
+    };
+    var bt1 = BinaryTree{ .root = &bt1n0 };
+
+    var trees_are_equal = compare(bt.root, bt1.root);
+    try testing.expect(trees_are_equal == false);
+}
+
+test "compare: two trees are note structural or value equivalent" {
+    var bt1n4 = BinaryTree.Node{ .data = 4 };
+    var bt1n3 = BinaryTree.Node{ .data = 5 };
+    var bt1n2 = BinaryTree.Node{
+        .data = 3,
+        .left = null,
+        .right = null,
+    };
+    var bt1n1 = BinaryTree.Node{
+        .data = 23,
+        .left = &bt1n3,
+        .right = &bt1n4,
+    };
+    var bt1n0 = BinaryTree.Node{
+        .data = 7,
+        .left = &bt1n1,
+        .right = &bt1n2,
+    };
+    var bt1 = BinaryTree{ .root = &bt1n0 };
+
+    var trees_are_equal = compare(bt.root, bt1.root);
+    try testing.expect(trees_are_equal == false);
+}
+
+test "bfs: finds 4 in tree" {
+    var bt1n3 = BinaryTree.Node{ .data = 4 };
+    var bt1n2 = BinaryTree.Node{
+        .data = 15,
+        .left = null,
+        .right = null,
+    };
+    var bt1n1 = BinaryTree.Node{
+        .data = 5,
+        .left = &bt1n3,
+        .right = null,
+    };
+    var bt1n0 = BinaryTree.Node{
+        .data = 10,
+        .left = &bt1n1,
+        .right = &bt1n2,
+    };
+
+    var bt1 = BinaryTree{ .root = &bt1n0 };
+    var value_found = search(bt1.root, 4);
+    try testing.expect(value_found == true);
+}
+
+test "bfs: fails to find 11 in tree" {
+    var bt1n3 = BinaryTree.Node{ .data = 4 };
+    var bt1n2 = BinaryTree.Node{
+        .data = 15,
+        .left = null,
+        .right = null,
+    };
+    var bt1n1 = BinaryTree.Node{
+        .data = 5,
+        .left = &bt1n3,
+        .right = null,
+    };
+    var bt1n0 = BinaryTree.Node{
+        .data = 10,
+        .left = &bt1n1,
+        .right = &bt1n2,
+    };
+
+    var bt1 = BinaryTree{ .root = &bt1n0 };
+    var value_found = search(bt1.root, 11);
+    try testing.expect(value_found == false);
 }
