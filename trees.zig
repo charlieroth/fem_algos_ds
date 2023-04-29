@@ -118,21 +118,25 @@ pub fn dfs(head: ?*BinaryTree.Node, needle: u8) bool {
     return search(head, needle);
 }
 
-// pub fn insert(parent: ?*BinaryTree.Node, curr: ?*BinaryTree.Node, node: *BinaryTree.Node) void {
-//     if (node.data > curr.?.data) {
-//         insert(curr, curr.?.right, node);
-//     } else if (node.data <= curr.?.data) {
-//         insert(curr, curr.?.left, node);
-//     } else {
-//         if (node.data > parent.?.data) {
-//             parent.?.right = node;
-//             return;
-//         }
-//
-//         parent.?.left = node;
-//         return;
-//     }
-// }
+pub fn insert(parent: ?*BinaryTree.Node, curr: ?*BinaryTree.Node, node: *BinaryTree.Node) void {
+    if (curr) |c| {
+        if (c.data < node.data) {
+            return insert(c, c.right, node);
+        }
+
+        return insert(c, c.left, node);
+    }
+
+    if (parent) |p| {
+        if (p.data < node.data) {
+            p.right = node;
+            return;
+        }
+
+        p.left = node;
+        return;
+    }
+}
 
 var n6 = BinaryTree.Node{ .data = 21 };
 var n5 = BinaryTree.Node{ .data = 18 };
@@ -323,4 +327,34 @@ test "bfs: fails to find 11 in tree" {
     var bt1 = BinaryTree{ .root = &bt1n0 };
     var value_found = search(bt1.root, 11);
     try testing.expect(value_found == false);
+}
+
+test "insert: inserts many nodes and order is correct" {
+    var bt1n0 = BinaryTree.Node{ .data = 10 };
+    var bt1 = BinaryTree{ .root = &bt1n0 };
+
+    var bt1n1 = BinaryTree.Node{ .data = 5 };
+    insert(null, bt1.root, &bt1n1);
+    var was_inserted = search(bt1.root, 5);
+    try testing.expect(was_inserted == true);
+
+    var bt1n2 = BinaryTree.Node{ .data = 15 };
+    insert(null, bt1.root, &bt1n2);
+    was_inserted = search(bt1.root, 15);
+    try testing.expect(was_inserted == true);
+
+    var bt1n3 = BinaryTree.Node{ .data = 4 };
+    insert(null, bt1.root, &bt1n3);
+    was_inserted = search(bt1.root, 4);
+    try testing.expect(was_inserted == true);
+
+    var arena = heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    var allocator = arena.allocator();
+
+    var path = try traverse(allocator, &bt1, .InOrder);
+    try testing.expect(path.len == 4);
+
+    const expected_path = [4]u8{ 4, 5, 10, 15 };
+    try testing.expect(mem.eql(u8, path, &expected_path));
 }
